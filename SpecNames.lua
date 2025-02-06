@@ -86,7 +86,20 @@ function SpecNames_SlashCommand(msg)
         DEFAULT_CHAT_FRAME:AddMessage(BLUE.."[SpecNames]"..WHITE.."Type '/specnames delete' or '/sn delete' followed by spec number to delete it."..FONT_COLOR_CODE_CLOSE)
     elseif strfind(strlower(msg), "rename [1-4]") then
         _,_, specToRenameIndex = strfind(strlower(msg), "rename (%d)")
-        specToRename = SN_PLAYER_SPECS[tonumber(specToRenameIndex)]
+        specToRenameIndex = tonumber(specToRenameIndex)
+        specToRename = SN_PLAYER_SPECS[specToRenameIndex]
+        if not specToRename then
+            if specToRenameIndex == 1 then
+                specToRename = "1st Specialization"
+            elseif specToRenameIndex == 2 then
+                specToRename = "2nd Specialization"
+            elseif specToRenameIndex == 3 then
+                specToRename = "3rd Specialization"
+            elseif specToRenameIndex == 4 then
+                specToRename = "4th Specialization"
+            end
+            SN_PLAYER_SPECS[specToRenameIndex] = specToRename
+        end
         StaticPopup_Show("SPECNAMES_RENAME")
     elseif strfind(strlower(msg), "delete [1-4]") then
         local _,_, index = strfind(strlower(msg), "delete (%d)")
