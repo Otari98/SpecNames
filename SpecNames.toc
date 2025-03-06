@@ -1,7 +1,7 @@
 ## Interface: 11200
 ## Title: SpecNames |cffc79c6e-Spit-|r
 ## Author: Otari98
-## Version: 1.0
+## Version: 1.1
 ## Notes: Allows to name your specializations inside Brainwashing Device.
 ## SavedVariablesPerCharacter: SN_PLAYER_SPECS
 

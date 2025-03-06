@@ -45,7 +45,7 @@ function GossipFrameOptionsUpdate(...)
 		end
 		titleButton = getglobal("GossipTitleButton" .. GossipFrame.buttonIndex);
 		titleButton:SetText(arg[i]);
-        local _, _, specIndex = strfind(arg[i], "Activate (%d).. Specialization %(%d+/%d+/%d+%)")
+        local _, _, specIndex = strfind(arg[i], "Activate (%d).. Specialization  %(%d+/%d+/%d+%)")
         if specIndex then
             specIndex = tonumber(specIndex)
             if SN_PLAYER_SPECS[specIndex] then
