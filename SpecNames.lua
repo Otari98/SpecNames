@@ -49,7 +49,7 @@ function GossipFrameOptionsUpdate(...)
         if specIndex then
             specIndex = tonumber(specIndex)
             if SN_PLAYER_SPECS[specIndex] then
-                titleButton:SetText(arg[i].." ("..SN_PLAYER_SPECS[specIndex]..")")
+                titleButton:SetText(arg[i].."\n("..SN_PLAYER_SPECS[specIndex]..")")
             end
         end
 		GossipResize(titleButton);
