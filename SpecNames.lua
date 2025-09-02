@@ -1,5 +1,7 @@
+local _G = _G or getfenv(0)
 SN_PLAYER_SPECS = SN_PLAYER_SPECS or {}
 
+local resetCost = nil
 local selectedGossip = nil
 local selectedSpecIndex = nil
 local specToRename = nil
@@ -8,7 +10,7 @@ local BLUE = "|cff0070de"
 local WHITE = HIGHLIGHT_FONT_COLOR_CODE
 
 local function strtrim(s)
-	return (string.gsub(s or "", "^%s*(.-)%s*$", "%1"))
+    return (string.gsub(s or "", "^%s*(.-)%s*$", "%1"))
 end
 
 local f = CreateFrame("Frame", "SpecNamesFrame")
@@ -16,50 +18,56 @@ f:RegisterEvent("GOSSIP_CLOSED")
 f:SetScript("OnEvent", function()
     selectedGossip = nil
     selectedSpecIndex = nil
+	resetCost = nil
+	StaticPopup_Hide("SPECNAMES_CONFIRM_TALENT_WIPE")
+	StaticPopup_Hide("SPECNAMES_NEW")
 end)
 
+local old_GossipTitleButton_OnClick = GossipTitleButton_OnClick
 function GossipTitleButton_OnClick()
     local text = this:GetText()
     _, _, selectedSpecIndex = strfind(text, "Save (%d).. Specialization.")
+	_, _, resetCost = strfind(text, "^Reset my talents.%s*%((%d*g?%d*s?%d*c?)%)")
     if selectedSpecIndex then
         selectedGossip = this:GetID()
         selectedSpecIndex = tonumber(selectedSpecIndex)
         StaticPopup_Show("SPECNAMES_NEW")
         return
+	elseif resetCost then
+		local _, _, gold = strfind(resetCost, "(%d*)g")
+		local _, _, silver = strfind(resetCost, "(%d*)s")
+		local _, _, copper = strfind(resetCost, "(%d*)c")
+		if copper then
+			resetCost = tonumber(copper)
+			if silver then
+				resetCost = tonumber(silver * 100) + resetCost
+				if gold then
+					resetCost = tonumber(gold) * 10000 + resetCost
+				end
+			end
+			selectedGossip = this:GetID()
+			StaticPopup_Show("SPECNAMES_CONFIRM_TALENT_WIPE")
+		end
+    else
+        return old_GossipTitleButton_OnClick()
     end
-    if ( this.type == "Available" ) then
-		SelectGossipAvailableQuest(this:GetID());
-	elseif ( this.type == "Active" ) then
-		SelectGossipActiveQuest(this:GetID());
-	else
-		SelectGossipOption(this:GetID());
-	end
 end
 
+local old_GossipFrameOptionsUpdate = GossipFrameOptionsUpdate
 function GossipFrameOptionsUpdate(...)
-	local titleButton;
-	local titleIndex = 1;
-	for i=1, arg.n, 2 do
-		if ( GossipFrame.buttonIndex > NUMGOSSIPBUTTONS ) then
-			message("This NPC has too many quests and/or gossip options.");
-		end
-		titleButton = getglobal("GossipTitleButton" .. GossipFrame.buttonIndex);
-		titleButton:SetText(arg[i]);
-        local _, _, specIndex = strfind(arg[i], "Activate (%d).. Specialization  %(%d+/%d+/%d+%)")
+    old_GossipFrameOptionsUpdate(unpack(arg))
+    for i = 1, NUMGOSSIPBUTTONS do
+        local titleButton = _G["GossipTitleButton" .. i]
+		local text = titleButton:GetText()
+        local _, _, specIndex = strfind(text or "", "^Activate (%d)%a* Specialization")
         if specIndex then
             specIndex = tonumber(specIndex)
             if SN_PLAYER_SPECS[specIndex] then
-                titleButton:SetText(arg[i].."\n("..SN_PLAYER_SPECS[specIndex]..")")
+                titleButton:SetText(text.."\n("..SN_PLAYER_SPECS[specIndex]..")")
+				GossipResize(titleButton)
             end
         end
-		GossipResize(titleButton);
-		titleButton:SetID(titleIndex);
-		titleButton.type="Gossip";
-		getglobal(titleButton:GetName() .. "GossipIcon"):SetTexture("Interface\\GossipFrame\\" .. arg[i+1] .. "GossipIcon");
-		GossipFrame.buttonIndex = GossipFrame.buttonIndex + 1;
-		titleIndex = titleIndex + 1;
-		titleButton:Show();
-	end
+    end
 end
 
 SLASH_SPECNAMES1 = "/specnames"
@@ -112,21 +120,21 @@ end
 
 StaticPopupDialogs["SPECNAMES_NEW"] = {
     text = "Enter Specialization Name:",
-    button1 = "Save",
-    button2 = "Cancel",
+    button1 = SAVE,
+    button2 = CANCEL,
     hasEditBox = 1,
     OnShow = function()
-        getglobal(this:GetName().."EditBox"):SetFocus()
-        getglobal(this:GetName() .. "EditBox"):SetScript("OnEnterPressed", function()
+        _G[this:GetName().."EditBox"]:SetFocus()
+        _G[this:GetName() .. "EditBox"]:SetScript("OnEnterPressed", function()
             StaticPopup1Button1:Click()
         end)
-        getglobal(this:GetName() .. "EditBox"):SetScript("OnEscapePressed", function()
-            getglobal(this:GetParent():GetName() .. "EditBox"):SetText("")
+        _G[this:GetName() .. "EditBox"]:SetScript("OnEscapePressed", function()
+            _G[this:GetParent():GetName() .. "EditBox"]:SetText("")
             StaticPopup1Button2:Click()
         end)
     end,
     OnAccept = function()
-        local box = getglobal(this:GetParent():GetName() .. "EditBox")
+        local box = _G[this:GetParent():GetName() .. "EditBox"]
         local text = strtrim(box:GetText())
         if selectedSpecIndex and text ~= "" then
             SN_PLAYER_SPECS[selectedSpecIndex] = text
@@ -141,26 +149,26 @@ StaticPopupDialogs["SPECNAMES_NEW"] = {
 
 StaticPopupDialogs["SPECNAMES_RENAME"] = {
     text = "",
-    button1 = "Save",
-    button2 = "Cancel",
+    button1 = SAVE,
+    button2 = CANCEL,
     hasEditBox = 1,
     OnShow = function()
         if not specToRename then
             this:Hide()
             return
         end
-        getglobal(this:GetName() .. "Text"):SetText("Rename " .. specToRename .. " into:")
-        getglobal(this:GetName().."EditBox"):SetFocus()
-        getglobal(this:GetName() .. "EditBox"):SetScript("OnEnterPressed", function()
+        _G[this:GetName() .. "Text"]:SetText("Rename " .. specToRename .. " into:")
+        _G[this:GetName().."EditBox"]:SetFocus()
+        _G[this:GetName() .. "EditBox"]:SetScript("OnEnterPressed", function()
             StaticPopup1Button1:Click()
         end)
-        getglobal(this:GetName() .. "EditBox"):SetScript("OnEscapePressed", function()
-            getglobal(this:GetParent():GetName() .. "EditBox"):SetText("")
+        _G[this:GetName() .. "EditBox"]:SetScript("OnEscapePressed", function()
+            _G[this:GetParent():GetName() .. "EditBox"]:SetText("")
             StaticPopup1Button2:Click()
         end)
     end,
     OnAccept = function()
-        local box = getglobal(this:GetParent():GetName() .. "EditBox")
+        local box = _G[this:GetParent():GetName() .. "EditBox"]
         local text = strtrim(box:GetText())
         if specToRenameIndex and text ~= "" then
             SN_PLAYER_SPECS[tonumber(specToRenameIndex)] = text
@@ -172,3 +180,18 @@ StaticPopupDialogs["SPECNAMES_RENAME"] = {
     whileDead = 1,
     hideOnEscape = 1,
 }
+
+StaticPopupDialogs["SPECNAMES_CONFIRM_TALENT_WIPE"] = {
+	text = CONFIRM_TALENT_WIPE,
+	button1 = ACCEPT,
+	button2 = CANCEL,
+	OnAccept = function()
+		SelectGossipOption(selectedGossip);
+	end,
+	OnShow = function()
+		MoneyFrame_Update(this:GetName().."MoneyFrame", resetCost or 0)
+    end,
+	hasMoneyFrame = 1,
+	timeout = 0,
+	hideOnEscape = 1
+};
